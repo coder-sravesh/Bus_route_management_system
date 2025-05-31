@@ -1,1 +1,2 @@
-2,Route_One,stop1,8-10,stop2,10-11,stop3,11-12,stop4,12-01,stop5,01-02
+R101,City Loop,Central-10 AM;Market-10:30 AM;Airport-11 AM
+R102,Metro Link,Station-9 AM;Mall-9:45 AM;TechPark-10:15 AM
