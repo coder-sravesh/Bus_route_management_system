@@ -2,427 +2,385 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STOPS 5
-
-typedef struct
+void clearNewline(char *str)
 {
-    int busID;
-    char busName[50];
-    int routeID;
-} Bus;
-
-typedef struct
-{
-    int routeID;
-    char routeName[50];
-    char stops[MAX_STOPS][100]; // Format: "StopName - Timing"
-} Route;
-
-void addBus(FILE *busFile);
-void updateBus(FILE *busFile);
-void deleteBus(FILE *busFile);
-void addRoute(FILE *routeFile);
-void updateRoute(FILE *routeFile);
-void deleteRoute(FILE *routeFile);
-void filterByRouteID(FILE *busFile);
-void filterByStopName(FILE *busFile, FILE *routeFile);
-void viewAllBuses(FILE *busFile);
-void viewAllRoutes(FILE *routeFile);
-
-void showMenu(FILE *busFile, FILE *routeFile)
-{
-    int choice;
-    do
-    {
-        system("clear");
-        printf("=========================================\n");
-        printf("  Bus Route Management System\n");
-        printf("  Developed by Sravesh (2025)\n");
-        printf("=========================================\n\n");
-        printf("1. Add Bus\n2. Update Bus\n3. Delete Bus\n");
-        printf("4. Add Route\n5. Update Route\n6. Delete Route\n");
-        printf("7. Filter Bus by Route ID\n8. View all buses\n9. View all routes\n10. Filter Bus by Stop Name\n");
-        printf("9. Exit\nChoice: ");
-        scanf("%d", &choice);
-        getchar();
-
-        switch (choice)
-        {
-        case 1:
-            system("clear");
-            addBus(busFile);
-            break;
-        case 2:
-            system("clear");
-            updateBus(busFile);
-            break;
-        case 3:
-            system("clear");
-            deleteBus(busFile);
-            break;
-        case 4:
-            system("clear");
-            addRoute(routeFile);
-            break;
-        case 5:
-            system("clear");
-            updateRoute(routeFile);
-            break;
-        case 6:
-            system("clear");
-            deleteRoute(routeFile);
-            break;
-        case 7:
-            system("clear");
-            filterByRouteID(busFile);
-            break;
-        case 8:
-            system("clear");
-            viewAllBuses(busFile);
-            break;
-        case 9:
-            system("clear");
-            viewAllRoutes(routeFile);
-            break;
-        case 10:
-            system("clear");
-            filterByStopName(busFile, routeFile);
-            break;
-        case 11:
-            return;
-        default:
-            printf("Invalid choice\n");
-        }
-
-        printf("\nContinue? (y/n): ");
-    } while (getchar() == 'y');
+    int len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n')
+        str[len - 1] = '\0';
 }
 
-void viewAllBuses(FILE *busFile)
+void clearScreen()
 {
-    rewind(busFile);
-    char line[128];
-    int found = 0;
-    printf("\n--- All Buses ---\n");
-    while (fgets(line, sizeof(line), busFile))
-    {
-        char id[10], name[50], routeId[10];
-        if (sscanf(line, "%[^,],%[^,],%s", id, name, routeId) == 3)
-        {
-            printf("\n\nID: %s\n Bus Name: %s\n Route ID: %s\n", id, name, routeId);
-            found = 1;
-        }
-    }
-    if (!found)
-        printf("No buses found.\n");
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
 }
 
-void viewAllRoutes(FILE *routeFile)
+void waitForUser()
 {
-    rewind(routeFile);
-    char line[512];
-    int found = 0;
-    printf("\n--- All Routes ---\n");
-    while (fgets(line, sizeof(line), routeFile))
-    {
-        char id[10], name[50], stops[400];
-        if (sscanf(line, "%[^,],%[^,],%[^\n]", id, name, stops) == 3)
-        {
-            printf("Route Name: %s, ID: %s\n", name, id);
-            char *stop = strtok(stops, ";");
-            int i = 1;
-            while (stop != NULL)
-            {
-                char stopName[50], timing[50];
-                if (sscanf(stop, "%[^-]-%[^\n]", stopName, timing) == 2)
-                {
-                    printf("  Stop %d: %s - %s\n", i++, stopName, timing);
-                }
-                stop = strtok(NULL, ";");
-            }
-            found = 1;
-        }
-    }
-    if (!found)
-        printf("No routes found.\n");
+    printf("\nPress Enter to continue...");
+    getchar();
 }
 
 // Add Bus
-void addBus(FILE *busFile)
+void addBus()
 {
-    char id[10], name[50], routeId[10];
-    printf("Enter bus in format:\n  ID (e.g. B1)\n  Name (e.g. City Express)\n  Route ID (e.g. R101)\n");
+    FILE *f = fopen("bus.txt", "a");
+    if (!f)
+    {
+        printf("Cannot open bus.txt\n");
+        return;
+    }
 
-    printf("ID: ");
+    char id[10], name[50], routeId[10];
+    printf("Bus ID: ");
     fgets(id, sizeof(id), stdin);
-    id[strcspn(id, "\n")] = 0;
-    printf("Name: ");
+    clearNewline(id);
+    printf("Bus Name: ");
     fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\n")] = 0;
+    clearNewline(name);
     printf("Route ID: ");
     fgets(routeId, sizeof(routeId), stdin);
-    routeId[strcspn(routeId, "\n")] = 0;
-
-    fprintf(busFile, "%s,%s,%s\n", id, name, routeId);
+    clearNewline(routeId);
+    fprintf(f, "%s %s %s\n", id, name, routeId);
+    fclose(f);
     printf("Bus added.\n");
 }
 
 // Update Bus
-void updateBus(FILE *busFile)
+void updateBus()
 {
-    int id, found = 0;
-    printf("Enter Bus ID to update: ");
-    scanf("%d", &id);
-
-    FILE *temp = fopen("temp.txt", "w");
-    rewind(busFile);
-    Bus b;
-    char line[100];
-
-    while (fgets(line, sizeof(line), busFile))
+    FILE *f = fopen("bus.txt", "r");
+    if (!f)
     {
-        sscanf(line, "%d,%49[^,],%d", &b.busID, b.busName, &b.routeID);
-        if (b.busID == id)
+        printf("No bus file\n");
+        return;
+    }
+    FILE *temp = fopen("temp.txt", "w");
+    char id[10], bid[10], name[50], routeId[10];
+    int found = 0;
+    printf("Enter Bus ID: ");
+    fgets(id, sizeof(id), stdin);
+    clearNewline(id);
+
+    while (fscanf(f, "%s %s %s", bid, name, routeId) == 3)
+    {
+        if (strcmp(bid, id) == 0)
         {
             found = 1;
             printf("New Name: ");
-            getchar();
-            fgets(b.busName, 50, stdin);
-            b.busName[strcspn(b.busName, "\n")] = 0;
+            fgets(name, sizeof(name), stdin);
+            clearNewline(name);
             printf("New Route ID: ");
-            scanf("%d", &b.routeID);
+            fgets(routeId, sizeof(routeId), stdin);
+            clearNewline(routeId);
         }
-        fprintf(temp, "%d,%s,%d\n", b.busID, b.busName, b.routeID);
+        fprintf(temp, "%s %s %s\n", bid, name, routeId);
     }
-    fclose(busFile);
+
+    fclose(f);
     fclose(temp);
     remove("bus.txt");
     rename("temp.txt", "bus.txt");
-    busFile = fopen("bus.txt", "a+");
-    printf(found ? "Bus updated.\n" : "Bus not found.\n");
+    printf(found ? "Updated.\n" : "Not found.\n");
 }
 
 // Delete Bus
-void deleteBus(FILE *busFile)
+void deleteBus()
 {
-    int id, found = 0;
-    printf("Enter Bus ID to delete: ");
-    scanf("%d", &id);
-    FILE *temp = fopen("temp.txt", "w");
-    rewind(busFile);
-    Bus b;
-    char line[100];
-
-    while (fgets(line, sizeof(line), busFile))
+    FILE *f = fopen("bus.txt", "r");
+    if (!f)
     {
-        sscanf(line, "%d,%49[^,],%d", &b.busID, b.busName, &b.routeID);
-        if (b.busID != id)
-            fprintf(temp, "%d,%s,%d\n", b.busID, b.busName, b.routeID);
+        printf("No bus file\n");
+        return;
+    }
+    FILE *temp = fopen("temp.txt", "w");
+    char id[10], bid[10], name[50], routeId[10];
+    int found = 0;
+    printf("Bus ID to delete: ");
+    fgets(id, sizeof(id), stdin);
+    clearNewline(id);
+
+    while (fscanf(f, "%s %s %s", bid, name, routeId) == 3)
+    {
+        if (strcmp(bid, id) != 0)
+            fprintf(temp, "%s %s %s\n", bid, name, routeId);
         else
             found = 1;
     }
-    fclose(busFile);
+
+    fclose(f);
     fclose(temp);
     remove("bus.txt");
     rename("temp.txt", "bus.txt");
-    busFile = fopen("bus.txt", "a+");
-    printf(found ? "Bus deleted.\n" : "Bus not found.\n");
+    printf(found ? "Deleted.\n" : "Not found.\n");
 }
 
 // Add Route
-void addRoute(FILE *routeFile)
+void addRoute()
 {
-    char id[10], name[50], stops[400];
-    printf("Enter route in format:\n  ID (e.g. R101)\n  Name (e.g. City Loop)\n  Stops in Stop-Timing;Stop-Timing format (e.g. Central-10AM;Market-10:30AM)\n");
+    FILE *f = fopen("route.txt", "a");
+    if (!f)
+    {
+        printf("Cannot open route.txt\n");
+        return;
+    }
 
-    printf("ID: ");
+    char id[10], name[50], stops[200];
+    printf("Route ID: ");
     fgets(id, sizeof(id), stdin);
-    id[strcspn(id, "\n")] = 0;
-    printf("Name: ");
+    clearNewline(id);
+    printf("Route Name: ");
     fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\n")] = 0;
-    printf("Stops: ");
+    clearNewline(name);
+    printf("Stops (Stop1-Time1;Stop2-Time2): ");
     fgets(stops, sizeof(stops), stdin);
-    stops[strcspn(stops, "\n")] = 0;
-
-    fprintf(routeFile, "%s,%s,%s\n", id, name, stops);
+    clearNewline(stops);
+    fprintf(f, "%s %s %s\n", id, name, stops);
+    fclose(f);
     printf("Route added.\n");
 }
 
 // Update Route
-void updateRoute(FILE *routeFile)
+void updateRoute()
 {
-    int id, found = 0;
-    printf("Enter Route ID to update: ");
-    scanf("%d", &id);
-    FILE *temp = fopen("temp.txt", "w");
-    rewind(routeFile);
-    char line[512];
-
-    while (fgets(line, sizeof(line), routeFile))
+    FILE *f = fopen("route.txt", "r");
+    if (!f)
     {
-        Route r;
-        char *token = strtok(line, ",");
-        if (!token)
-            continue;
-        r.routeID = atoi(token);
-        if (r.routeID == id)
+        printf("No route file\n");
+        return;
+    }
+    FILE *temp = fopen("temp.txt", "w");
+    char id[10], rid[10], name[50], stops[200];
+    int found = 0;
+    printf("Route ID to update: ");
+    fgets(id, sizeof(id), stdin);
+    clearNewline(id);
+
+    while (fscanf(f, "%s %s %[^\n]", rid, name, stops) == 3)
+    {
+        if (strcmp(rid, id) == 0)
         {
             found = 1;
-            printf("New Route Name: ");
-            getchar();
-            fgets(r.routeName, 50, stdin);
-            r.routeName[strcspn(r.routeName, "\n")] = 0;
-            printf("Update stops? (y/n): ");
-            char ch = getchar();
-            getchar();
-            if (ch == 'y')
-            {
-                for (int i = 0; i < MAX_STOPS; i++)
-                {
-                    printf("Stop %d (Name - Time): ", i + 1);
-                    fgets(r.stops[i], 100, stdin);
-                    r.stops[i][strcspn(r.stops[i], "\n")] = 0;
-                }
-            }
-            else
-            {
-                for (int i = 0; i < MAX_STOPS; i++)
-                    strcpy(r.stops[i], strtok(NULL, ","));
-            }
-            fprintf(temp, "%d,%s", r.routeID, r.routeName);
-            for (int i = 0; i < MAX_STOPS; i++)
-                fprintf(temp, ",%s", r.stops[i]);
-            fprintf(temp, "\n");
+            printf("New Name: ");
+            fgets(name, sizeof(name), stdin);
+            clearNewline(name);
+            printf("New Stops: ");
+            fgets(stops, sizeof(stops), stdin);
+            clearNewline(stops);
         }
-        else
-        {
-            fprintf(temp, "%d", r.routeID);
-            for (int i = 0; i < 6; i++)
-            {
-                token = strtok(NULL, ",");
-                if (token)
-                    fprintf(temp, ",%s", token);
-            }
-            fprintf(temp, "\n");
-        }
+        fprintf(temp, "%s %s %s\n", rid, name, stops);
     }
-    fclose(routeFile);
+
+    fclose(f);
     fclose(temp);
     remove("route.txt");
     rename("temp.txt", "route.txt");
-    routeFile = fopen("route.txt", "a+");
-    printf(found ? "Route updated.\n" : "Route not found.\n");
+    printf(found ? "Updated.\n" : "Not found.\n");
 }
 
 // Delete Route
-void deleteRoute(FILE *routeFile)
+void deleteRoute()
 {
-    int id, found = 0;
-    printf("Enter Route ID to delete: ");
-    scanf("%d", &id);
-    FILE *temp = fopen("temp.txt", "w");
-    rewind(routeFile);
-    char line[512];
-    while (fgets(line, sizeof(line), routeFile))
+    FILE *f = fopen("route.txt", "r");
+    if (!f)
     {
-        if (atoi(strtok(line, ",")) != id)
-            fprintf(temp, "%s", line);
+        printf("No route file\n");
+        return;
+    }
+    FILE *temp = fopen("temp.txt", "w");
+    char id[10], rid[10], name[50], stops[200];
+    int found = 0;
+    printf("Route ID to delete: ");
+    fgets(id, sizeof(id), stdin);
+    clearNewline(id);
+
+    while (fscanf(f, "%s %s %[^\n]", rid, name, stops) == 3)
+    {
+        if (strcmp(rid, id) != 0)
+            fprintf(temp, "%s %s %s\n", rid, name, stops);
         else
             found = 1;
     }
-    fclose(routeFile);
+
+    fclose(f);
     fclose(temp);
     remove("route.txt");
     rename("temp.txt", "route.txt");
-    routeFile = fopen("route.txt", "a+");
-    printf(found ? "Route deleted.\n" : "Route not found.\n");
+    printf(found ? "Deleted.\n" : "Not found.\n");
 }
 
-// Filter Bus by Route ID
-void filterByRouteID(FILE *busFile)
+// View All Buses
+void viewAllBuses()
 {
-    int id, found = 0;
-    printf("Enter Route ID: ");
-    scanf("%d", &id);
-    rewind(busFile);
-    Bus b;
-    char line[100];
-    while (fgets(line, sizeof(line), busFile))
+    FILE *f = fopen("bus.txt", "r");
+    if (!f)
     {
-        sscanf(line, "%d,%[^,],%d", &b.busID, b.busName, &b.routeID);
-        if (b.routeID == id)
-        {
-            printf("Bus ID: %d | Name: %s | Route ID: %d\n", b.busID, b.busName, b.routeID);
-            found = 1;
-        }
+        printf("No bus data.\n");
+        return;
     }
-    if (!found)
-        printf("No buses found.\n");
+
+    char id[10], name[50], routeId[10];
+    printf("\n--- All Buses ---\n");
+    while (fscanf(f, "%s %s %s", id, name, routeId) == 3)
+        printf("ID: %s, Name: %s, Route ID: %s\n", id, name, routeId);
+    fclose(f);
 }
 
-// Filter Bus by Stop Name
-void filterByStopName(FILE *busFile, FILE *routeFile)
+// View All Routes
+void viewAllRoutes()
 {
-    char stop[50];
-    int matchIDs[100], count = 0;
-    printf("Enter Stop Name: ");
-    getchar();
-    fgets(stop, 50, stdin);
-    stop[strcspn(stop, "\n")] = 0;
-
-    rewind(routeFile);
-    char line[512];
-    while (fgets(line, sizeof(line), routeFile))
+    FILE *f = fopen("route.txt", "r");
+    if (!f)
     {
-        char *tok = strtok(line, ",");
-        int routeID = atoi(tok);
-        tok = strtok(NULL, ",");
-        for (int i = 0; i < MAX_STOPS; i++)
-        {
-            tok = strtok(NULL, ",");
-            if (tok && strstr(tok, stop))
-            {
-                matchIDs[count++] = routeID;
-                break;
-            }
-        }
+        printf("No route data.\n");
+        return;
     }
 
-    rewind(busFile);
-    Bus b;
-    char bline[100];
+    char id[10], name[50], stops[200];
+    printf("\n--- All Routes ---\n");
+    while (fscanf(f, "%s %s %[^\n]", id, name, stops) == 3)
+        printf("ID: %s, Name: %s, Stops: %s\n", id, name, stops);
+    fclose(f);
+}
+
+// Filter Buses by Route Name
+void filterBusByRouteName()
+{
+    char rname[50], rid[10], name[50], stops[200];
+    printf("Enter Route Name: ");
+    fgets(rname, sizeof(rname), stdin);
+    clearNewline(rname);
+
+    FILE *rf = fopen("route.txt", "r");
     int found = 0;
-    while (fgets(bline, sizeof(bline), busFile))
+    while (fscanf(rf, "%s %s %[^\n]", rid, name, stops) == 3)
     {
-        sscanf(bline, "%d,%[^,],%d", &b.busID, b.busName, &b.routeID);
+        if (strcmp(name, rname) == 0)
+        {
+            found = 1;
+            break;
+        }
+    }
+    fclose(rf);
+
+    if (!found)
+    {
+        printf("Route not found.\n");
+        return;
+    }
+
+    FILE *bf = fopen("bus.txt", "r");
+    char id[10], busname[50], routeId[10];
+    printf("Buses for route '%s':\n", rname);
+    while (fscanf(bf, "%s %s %s", id, busname, routeId) == 3)
+    {
+        if (strcmp(routeId, rid) == 0)
+            printf("ID: %s, Name: %s\n", id, busname);
+    }
+    fclose(bf);
+}
+
+// Filter Buses by Station Name
+void filterBusByStation()
+{
+    char station[50], rid[10], name[50], stops[200];
+    printf("Enter Station Name: ");
+    fgets(station, sizeof(station), stdin);
+    clearNewline(station);
+
+    FILE *rf = fopen("route.txt", "r");
+    char matchedRoutes[100][10];
+    int count = 0;
+
+    while (fscanf(rf, "%s %s %[^\n]", rid, name, stops) == 3)
+    {
+        if (strstr(stops, station))
+        {
+            strcpy(matchedRoutes[count++], rid);
+        }
+    }
+    fclose(rf);
+
+    if (count == 0)
+    {
+        printf("No routes found with this station.\n");
+        return;
+    }
+
+    FILE *bf = fopen("bus.txt", "r");
+    char id[10], busname[50], routeId[10];
+    printf("Buses passing through '%s':\n", station);
+    while (fscanf(bf, "%s %s %s", id, busname, routeId) == 3)
+    {
         for (int i = 0; i < count; i++)
         {
-            if (b.routeID == matchIDs[i])
+            if (strcmp(routeId, matchedRoutes[i]) == 0)
             {
-                printf("Bus ID: %d | Name: %s | Route ID: %d\n", b.busID, b.busName, b.routeID);
-                found = 1;
+                printf("ID: %s, Name: %s\n", id, busname);
             }
         }
     }
-    if (!found)
-        printf("No buses found.\n");
+    fclose(bf);
 }
 
-// Main
+// Menu
 int main()
 {
-    FILE *busFile = fopen("bus.txt", "a+");
-    FILE *routeFile = fopen("route.txt", "a+");
-    if (!busFile || !routeFile)
+    int ch;
+    while (1)
     {
-        printf("File error.\n");
-        return 1;
+        clearScreen();
+        printf("\n--- Bus Route Management ---\n");
+        printf("1. Add Bus\n2. Update Bus\n3. Delete Bus\n");
+        printf("4. Add Route\n5. Update Route\n6. Delete Route\n");
+        printf("7. View All Buses\n8. View All Routes\n");
+        printf("9. Filter Bus by Route Name\n10. Filter Bus by Station Name\n");
+        printf("0. Exit\nChoice: ");
+        scanf("%d", &ch);
+        getchar(); // clear newline
+
+        clearScreen();
+        switch (ch)
+        {
+        case 1:
+            addBus();
+            break;
+        case 2:
+            updateBus();
+            break;
+        case 3:
+            deleteBus();
+            break;
+        case 4:
+            addRoute();
+            break;
+        case 5:
+            updateRoute();
+            break;
+        case 6:
+            deleteRoute();
+            break;
+        case 7:
+            viewAllBuses();
+            break;
+        case 8:
+            viewAllRoutes();
+            break;
+        case 9:
+            filterBusByRouteName();
+            break;
+        case 10:
+            filterBusByStation();
+            break;
+        case 0:
+            exit(0);
+        default:
+            printf("Invalid.\n");
+        }
+        waitForUser();
     }
-
-    showMenu(busFile, routeFile);
-
-    fclose(busFile);
-    fclose(routeFile);
     return 0;
 }

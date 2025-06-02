@@ -1,2 +1,1 @@
-R101,City Loop,Central-10 AM;Market-10:30 AM;Airport-11 AM
-R102,Metro Link,Station-9 AM;Mall-9:45 AM;TechPark-10:15 AM
+R1 route1 station-5AM
