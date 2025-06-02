@@ -11,17 +11,32 @@ void clearNewline(char *str)
 
 void clearScreen()
 {
-#ifdef _WIN32
-    system("cls");
-#else
+
     system("clear");
-#endif
+}
+
+void printTitle()
+{
+
+    printf("============================================\n");
+    printf("         BUS ROUTE MANAGEMENT SYSTEM        \n");
+    printf("============================================\n");
+    printf("             Made by Sravesh                \n");
+    printf("============================================\n\n");
 }
 
 void waitForUser()
 {
-    printf("\nPress Enter to continue...");
-    getchar();
+    char choice;
+    printf("\nDo you want to continue? (y/n): ");
+    choice = getchar();
+    getchar(); // To consume the newline after pressing a key
+
+    if (choice != 'y' && choice != 'Y')
+    {
+        printf("Exiting program.\n");
+        exit(0);
+    }
 }
 
 // Add Bus
@@ -329,18 +344,17 @@ void filterBusByStation()
 // Menu
 int main()
 {
+    printTitle();
     int ch;
     while (1)
     {
-        clearScreen();
-        printf("\n--- Bus Route Management ---\n");
         printf("1. Add Bus\n2. Update Bus\n3. Delete Bus\n");
         printf("4. Add Route\n5. Update Route\n6. Delete Route\n");
         printf("7. View All Buses\n8. View All Routes\n");
         printf("9. Filter Bus by Route Name\n10. Filter Bus by Station Name\n");
         printf("0. Exit\nChoice: ");
         scanf("%d", &ch);
-        getchar(); // clear newline
+        getchar();
 
         clearScreen();
         switch (ch)
